@@ -39,8 +39,12 @@ _NJY_PER_NANOMAGGY = 3.631
 
 _large_phot_basedir = os.path.join(
     os.getenv("DESI_ROOT", ""),
-    "users", "nweaverd", "nweaverd_desi", "Steel", "finalized_target_catalogs",
+    "users", "ioannis", "desihiz", "protoSteel", "phot",
 )
+#_large_phot_basedir = os.path.join(
+#    os.getenv("DESI_ROOT", ""),
+#    "users", "nweaverd", "nweaverd_desi", "Steel", "finalized_target_catalogs",
+#)
 
 _large_phot_fn = {
     "cosmos_pr51": "hsc_icmodelmag_22-24_RA130d5_DEC000.fits.gz",
@@ -73,6 +77,7 @@ def read_protosteel_large_phot(fn, objids):
         p[key].name = p[key].name.upper()
 
     # convert nJy → nanomaggies, rename to standard FLUX/FIBERFLUX columns
+    basename = os.path.basename(fn)
     for band in ["G", "R", "I", "Z", "Y"]:
         for prefix, raw_prefix in [("FLUX", "CMODEL"), ("FIBERFLUX", "FIBER")]:
             flux_raw = "{}_{}_{}" .format(band, raw_prefix, "FLUX")
@@ -87,6 +92,12 @@ def read_protosteel_large_phot(fn, objids):
             p[ivar_out] = ivar
 
             del p[flux_raw], p[err_raw]
+
+            log.info(
+                "{}: convert {} and {} to {} (nanomaggies) and {}".format(
+                    basename, flux_raw, err_raw, flux_out, ivar_out
+                )
+            )
 
     return p
 
