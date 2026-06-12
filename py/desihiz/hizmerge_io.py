@@ -38,7 +38,7 @@ allowed_img_cases = {
     "hscwide": ["cosmos_yr3"],
     "ibis": ["xmmlss_yr4"],
     "merian": ["cosmos_yr2"],
-    "protosteel": ["cosmos_pr51", "cosmos_pr52", "cosmos_pr55"],
+    "protosteel": ["ra130d5", "ra140", "cosmos"],
 }
 allowed_cases = []
 for img in allowed_img_cases:
@@ -247,15 +247,15 @@ def get_specprod(case):
 
         specprod = "daily"
 
-    elif case == "cosmos_pr51":
+    elif case == "ra130d5":
 
         specprod = "tertiary51"
 
-    elif case == "cosmos_pr52":
+    elif case == "ra140":
 
         specprod = "tertiary52"
 
-    elif case == "cosmos_pr55":
+    elif case == "cosmos":
 
         specprod = "tertiary55"
 
@@ -516,6 +516,9 @@ def get_clauds_fn(case, v2=False, uband="u"):
 
     fn = None
     claudsdir = os.path.join(get_img_dir("clauds"), "phot")
+
+    if case[:6] != "cosmos":
+        return None
 
     field = case[:6]
 
@@ -977,17 +980,17 @@ def get_img_infos(img, case, stdsky):
         if img == "protosteel":
 
             from desihiz.hizmerge_protosteel import (
-                get_protosteel_cosmos_pr51_infos,
-                get_protosteel_cosmos_pr52_infos,
-                get_protosteel_cosmos_pr55_infos,
+                get_protosteel_ra130d5_infos,
+                get_protosteel_ra140_infos,
+                get_protosteel_cosmos_infos,
             )
 
-            if case == "cosmos_pr51":
-                mydict = get_protosteel_cosmos_pr51_infos()
-            if case == "cosmos_pr52":
-                mydict = get_protosteel_cosmos_pr52_infos()
-            if case == "cosmos_pr55":
-                mydict = get_protosteel_cosmos_pr55_infos()
+            if case == "ra130d5":
+                mydict = get_protosteel_ra130d5_infos()
+            if case == "ra140":
+                mydict = get_protosteel_ra140_infos()
+            if case == "cosmos":
+                mydict = get_protosteel_cosmos_infos()
 
     bands = get_img_bands(img)
     for band in bands:
@@ -1896,19 +1899,19 @@ def get_phot_fns(img, case, band, photdir=None, v2=None):
             os.getenv("DESI_ROOT"), "survey", "fiberassign", "special", "tertiary"
         )
         mydict = {
-            "cosmos_pr51_GRIZ": [
+            "ra130d5_GRIZ": [
                 os.path.join(
                     fadir, "0051", "inputcats",
                     "hsc_icmodelmag_22-24_fewcols_RA130d5_DEC000.fits.gz",
                 )
             ],
-            "cosmos_pr52_GRIZ": [
+            "ra140_GRIZ": [
                 os.path.join(
                     fadir, "0052", "inputcats",
                     "hsc_icmodelmag_22-24_fewcols_RA140_DEC003.fits.gz",
                 )
             ],
-            "cosmos_pr55_GRIZ": [
+            "cosmos_GRIZ": [
                 os.path.join(
                     fadir, "0055", "inputcats",
                     "hsc_icmodelmag_22-24_COSMOS_fewcols_withexisting.fits.gz",

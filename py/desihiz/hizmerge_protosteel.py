@@ -39,7 +39,7 @@ _NJY_PER_NANOMAGGY = 3.631
 
 _large_phot_basedir = os.path.join(
     os.getenv("DESI_ROOT", ""),
-    "users", "ioannis", "desihiz", "protoSteel", "phot",
+    "users", "ioannis", "desihiz", "protosteel", "phot",
 )
 #_large_phot_basedir = os.path.join(
 #    os.getenv("DESI_ROOT", ""),
@@ -47,9 +47,9 @@ _large_phot_basedir = os.path.join(
 #)
 
 _large_phot_fn = {
-    "cosmos_pr51": "hsc_icmodelmag_22-24_RA130d5_DEC000.fits.gz",
-    "cosmos_pr52": "hsc_icmodelmag_22-24_RA140_DEC003.fits.gz",
-    "cosmos_pr55": "hsc_icmodelmag_22-24_COSMOS.fits.gz",
+    "ra130d5": "hsc_icmodelmag_22-24_RA130d5_DEC000.fits.gz",
+    "ra140":   "hsc_icmodelmag_22-24_RA140_DEC003.fits.gz",
+    "cosmos":  "hsc_icmodelmag_22-24_COSMOS.fits.gz",
 }
 
 
@@ -160,9 +160,9 @@ def _get_protosteel_infos(prognum, fewcols_fn):
     return mydict
 
 
-def get_protosteel_cosmos_pr51_infos():
+def get_protosteel_ra130d5_infos():
     """
-    Get minimal photometric infos for protosteel cosmos_pr51 (tertiary 0051).
+    Get minimal photometric infos for protosteel ra130d5 (tertiary 0051, RA~130.5 DEC~0).
 
     Returns:
         mydict: dictionary with {keys: arrays},
@@ -173,9 +173,9 @@ def get_protosteel_cosmos_pr51_infos():
     )
 
 
-def get_protosteel_cosmos_pr52_infos():
+def get_protosteel_ra140_infos():
     """
-    Get minimal photometric infos for protosteel cosmos_pr52 (tertiary 0052).
+    Get minimal photometric infos for protosteel ra140 (tertiary 0052, RA~140 DEC~3).
 
     Returns:
         mydict: dictionary with {keys: arrays},
@@ -186,9 +186,9 @@ def get_protosteel_cosmos_pr52_infos():
     )
 
 
-def get_protosteel_cosmos_pr55_infos():
+def get_protosteel_cosmos_infos():
     """
-    Get minimal photometric infos for protosteel cosmos_pr55 (tertiary 0055).
+    Get minimal photometric infos for protosteel cosmos (tertiary 0055, COSMOS field).
 
     Returns:
         mydict: dictionary with {keys: arrays},

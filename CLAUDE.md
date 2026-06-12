@@ -95,7 +95,7 @@ desi_simcoadd
 Each imaging survey has one or more cases reflecting DESI tertiary program observation rounds:
 - `cosmos_yr1`, `cosmos_yr2`, `cosmos_yr3` — COSMOS field, years 1–3
 - `xmmlss_yr2`, `xmmlss_yr4` — XMM-LSS field
-- `cosmos_pr51`, `cosmos_pr52`, `cosmos_pr55` — protosteel (tertiary programs 0051, 0052, 0055)
+- `ra130d5`, `ra140`, `cosmos` — protosteel (tertiary programs 0051, 0052, 0055; named by field center)
 
 ### protosteel notes
 
@@ -103,8 +103,10 @@ Each imaging survey has one or more cases reflecting DESI tertiary program obser
 
 Key differences from other surveys:
 - Spectra live in the standard DESI spectro/redux tree (`$DESI_ROOT/spectro/redux/tertiary{51,52,55}/healpix/special/other/`) rather than the raichoor custom tree. Each program has its own specprod.
+- Cases are named by HSC-Wide field center (`ra130d5`=RA~130.5°, `ra140`=RA~140°, `cosmos`=COSMOS field). Future fields (including one XMM-LSS and two more random HSC-Y3 pointings) will follow the same convention.
 - `get_specdirs()` and `get_coaddfns()` return early for protosteel to use this non-standard path.
 - `get_expids()` returns early for protosteel, reading `exposures-tertiary{NN}.fits` directly (FITS, not CSV).
 - Photometry comes from per-case HSC parent catalogs (not a single all-sky file); see `_large_phot_fn` in `hizmerge_protosteel.py`. Row-selection via fitsio avoids loading the full catalog.
+- COSMOS2020/CLAUDS photo-z are applied only to the `cosmos` case (the other two fields lie outside the COSMOS footprint). `get_clauds_fn()` returns `None` for non-cosmos cases.
 - Fluxes are converted from nJy → nanomaggies on read and stored as `FLUX_{G,R,I,Z,Y}` / `FLUX_IVAR_{band}` and `FIBERFLUX_{band}` / `FIBERFLUX_IVAR_{band}`, matching the hscwide/suprime convention.
 - No Galactic extinction columns (user computes these externally).
