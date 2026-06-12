@@ -17,7 +17,6 @@ log = get_logger()
 # columns to read from the large HSC photometric catalog
 _large_phot_cols = [
     "OBJECT_ID", "RA", "DEC", "I_CMODEL_MAG_CORR",
-    "A_G", "A_R", "A_I", "A_Z", "A_Y",
     "G_CMODEL_FLUX", "G_CMODEL_FLUXERR",
     "R_CMODEL_FLUX", "R_CMODEL_FLUXERR",
     "I_CMODEL_FLUX", "I_CMODEL_FLUXERR",
@@ -34,6 +33,8 @@ _large_phot_cols = [
     "M_I_BLENDEDNESS_ABS",
     "DNNZ_PHOTOZ_BEST", "DNNZ_PHOTOZ_RISK_BEST", "DNNZ_PHOTOZ_STD_BEST",
 ]
+
+_NJY_PER_NANOMAGGY = 3.631
 
 
 _large_phot_basedir = os.path.join(
@@ -70,6 +71,23 @@ def read_protosteel_large_phot(fn, objids):
     p = Table(fitsio.read(fn, rows=rows, columns=_large_phot_cols))
     for key in p.colnames:
         p[key].name = p[key].name.upper()
+
+    # convert nJy → nanomaggies, rename to standard FLUX/FIBERFLUX columns
+    for band in ["G", "R", "I", "Z", "Y"]:
+        for prefix, raw_prefix in [("FLUX", "CMODEL"), ("FIBERFLUX", "FIBER")]:
+            flux_raw = "{}_{}_{}" .format(band, raw_prefix, "FLUX")
+            err_raw  = "{}_{}_{}".format(band, raw_prefix, "FLUXERR")
+            flux_out = "{}_{}".format(prefix, band)
+            ivar_out = "{}_IVAR_{}".format(prefix, band)
+
+            p[flux_out] = p[flux_raw] / _NJY_PER_NANOMAGGY
+            ivar = np.zeros(len(p), dtype=">f4")
+            good = p[err_raw] > 0
+            ivar[good] = (_NJY_PER_NANOMAGGY / p[err_raw][good]) ** 2
+            p[ivar_out] = ivar
+
+            del p[flux_raw], p[err_raw]
+
     return p
 
 

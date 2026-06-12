@@ -2091,25 +2091,20 @@ def get_phot_init_table(img, n):
             ("RA", ">f8"),
             ("DEC", ">f8"),
             ("I_CMODEL_MAG_CORR", ">f8"),
-            ("A_G", ">f8"),
-            ("A_R", ">f8"),
-            ("A_I", ">f8"),
-            ("A_Z", ">f8"),
-            ("A_Y", ">f8"),
         ]
 
         for band in ["G", "R", "I", "Z", "Y"]:
 
             dtype += [
-                ("{}_CMODEL_FLUX".format(band), ">f8"),
-                ("{}_CMODEL_FLUXERR".format(band), ">f8"),
+                ("FLUX_{}".format(band), ">f4"),
+                ("FLUX_IVAR_{}".format(band), ">f4"),
             ]
 
         for band in ["G", "R", "I", "Z", "Y"]:
 
             dtype += [
-                ("{}_FIBER_FLUX".format(band), ">f8"),
-                ("{}_FIBER_FLUXERR".format(band), ">f8"),
+                ("FIBERFLUX_{}".format(band), ">f4"),
+                ("FIBERFLUX_IVAR_{}".format(band), ">f4"),
             ]
 
         dtype += [
@@ -2879,7 +2874,7 @@ def merge_cases(img, stack_ss, spec_ds, phot_ds, phot_v2_ds, exps_ds):
 
     # spec_ds
     assert np.all(cases == list(spec_ds.keys()))
-    spec_d = vstack([spec_ds[case] for case in cases])
+    spec_d = vstack([spec_ds[case] for case in cases], metadata_conflicts="silent")
 
     # phot_ds
     if phot_ds is None:
@@ -2889,7 +2884,7 @@ def merge_cases(img, stack_ss, spec_ds, phot_ds, phot_v2_ds, exps_ds):
     else:
 
         assert np.all(cases == list(phot_ds.keys()))
-        phot_d = vstack([phot_ds[case] for case in cases])
+        phot_d = vstack([phot_ds[case] for case in cases], metadata_conflicts="silent")
 
     # phot_offset_ds
     if phot_v2_ds is None:
@@ -2906,11 +2901,11 @@ def merge_cases(img, stack_ss, spec_ds, phot_ds, phot_v2_ds, exps_ds):
 
         else:
 
-            phot_v2_d = vstack([phot_v2_ds[case] for case in cases])
+            phot_v2_d = vstack([phot_v2_ds[case] for case in cases], metadata_conflicts="silent")
 
     # expids_ds
     assert np.all(cases == list(exps_ds.keys()))
-    exps_d = vstack([exps_ds[case] for case in cases])
+    exps_d = vstack([exps_ds[case] for case in cases], metadata_conflicts="silent")
 
     # TODO: handle possible duplicates?
 
