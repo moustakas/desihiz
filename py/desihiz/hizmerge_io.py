@@ -55,18 +55,11 @@ def print_config_infos():
     log.info("HOSTNAME={}".format(os.getenv("HOSTNAME")))
 
     # desispec, desihiz code version/path
+    import importlib
     for name in ["desispec", "desihiz"]:
-        exec("import {}".format(name))
-        log.info(
-            "running with {} code version: {}".format(
-                name, eval("{}.__version__".format(name))
-            )
-        )
-        log.info(
-            "running with {} code path: {}".format(
-                name, eval("{}.__path__".format(name))
-            )
-        )
+        mod = importlib.import_module(name)
+        log.info("running with {} code version: {}".format(name, mod.__version__))
+        log.info("running with {} code path: {}".format(name, mod.__path__))
 
     #
     log.info("spec_rootdir: {}".format(get_spec_rootdir()))
