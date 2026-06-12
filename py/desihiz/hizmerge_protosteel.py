@@ -34,7 +34,7 @@ _large_phot_cols = [
     "DNNZ_PHOTOZ_BEST", "DNNZ_PHOTOZ_RISK_BEST", "DNNZ_PHOTOZ_STD_BEST",
 ]
 
-_NJY_PER_NANOMAGGY = 3.631
+_NJY_PER_NANOMAGGY = 3631.0
 
 
 _large_phot_basedir = os.path.join(
