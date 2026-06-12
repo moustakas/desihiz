@@ -30,7 +30,7 @@ from desiutil.log import get_logger
 log = get_logger()
 
 # allowed values
-allowed_imgs = ["odin", "suprime", "clauds", "hscwide", "ibis", "merian"]
+allowed_imgs = ["odin", "suprime", "clauds", "hscwide", "ibis", "merian", "protosteel"]
 allowed_img_cases = {
     "odin": ["cosmos_yr1", "xmmlss_yr2", "cosmos_yr2"],
     "suprime": ["cosmos_yr2", "cosmos_yr3"],
@@ -38,6 +38,7 @@ allowed_img_cases = {
     "hscwide": ["cosmos_yr3"],
     "ibis": ["xmmlss_yr4"],
     "merian": ["cosmos_yr2"],
+    "protosteel": ["cosmos_pr51", "cosmos_pr52", "cosmos_pr55"],
 }
 allowed_cases = []
 for img in allowed_img_cases:
@@ -128,6 +129,10 @@ def get_img_bands(img):
 
         bands = ["N540"]
 
+    if img == "protosteel":
+
+        bands = ["GRIZ"]
+
     return bands
 
 
@@ -196,6 +201,12 @@ def get_bb_img(fn):
 
         bb_img = "HSC"
 
+    elif os.path.basename(fn) in [
+        "hsc_icmodelmag_22-24_COSMOS.fits.gz",
+    ]:
+
+        bb_img = "HSC"
+
     else:
 
         msg = "unexpected fn: {}".format(fn)
@@ -237,6 +248,10 @@ def get_specprod(case):
     if case in ["xmmlss_yr4"]:
 
         specprod = "daily"
+
+    elif case in ["cosmos_pr51", "cosmos_pr52", "cosmos_pr55"]:
+
+        specprod = "tertiary51"
 
     else:
 
@@ -326,6 +341,17 @@ def get_specdirs(img, case):
         if case == "cosmos_yr2":
 
             casedirs = ["tertiary23-thru20230326-loa"]
+
+    if img == "protosteel":
+
+        # non-standard path: standard DESI spectro/redux, not raichoor custom tree
+        specdirs = [
+            os.path.join(
+                os.getenv("DESI_ROOT"), "spectro", "redux", "tertiary51",
+                "healpix", "special", "other",
+            )
+        ]
+        return specdirs
 
     specdirs = [
         os.path.join(spec_rootdir, specprod, "healpix", casedir) for casedir in casedirs
@@ -430,6 +456,10 @@ def get_ext_coeffs(img):
     if img == "merian":
 
         mydict = {_: tmpdict[_] for _ in ["MERIAN", "HSC"]}
+
+    if img == "protosteel":
+
+        mydict = {_: tmpdict[_] for _ in ["HSC"]}
 
     return mydict
 
@@ -759,6 +789,22 @@ def get_coaddfns(img, case):
 
     specdirs = get_specdirs(img, case)
 
+    if img == "protosteel":
+
+        # standard DESI healpix layout: files are two subdirectory levels deep
+        # coadd filenames use the survey-program-pixel convention
+        coaddfns = np.hstack(
+            [
+                sorted(
+                    glob(os.path.join(specdir, "*", "*", "coadd-special-other-*.fits"))
+                )
+                for specdir in specdirs
+            ]
+        )
+        for coaddfn in coaddfns:
+            log.info(coaddfn)
+        return coaddfns
+
     if "cosmos" in case:
         pattern = "coadd-27???.fits"
     elif "xmmlss" in case:
@@ -921,6 +967,21 @@ def get_img_infos(img, case, stdsky):
 
             if case == "cosmos_yr2":
                 mydict = get_merian_cosmos_yr2_infos()
+
+        if img == "protosteel":
+
+            from desihiz.hizmerge_protosteel import (
+                get_protosteel_cosmos_pr51_infos,
+                get_protosteel_cosmos_pr52_infos,
+                get_protosteel_cosmos_pr55_infos,
+            )
+
+            if case == "cosmos_pr51":
+                mydict = get_protosteel_cosmos_pr51_infos()
+            if case == "cosmos_pr52":
+                mydict = get_protosteel_cosmos_pr52_infos()
+            if case == "cosmos_pr55":
+                mydict = get_protosteel_cosmos_pr55_infos()
 
     bands = get_img_bands(img)
     for band in bands:
@@ -1815,6 +1876,33 @@ def get_phot_fns(img, case, band, photdir=None, v2=None):
             "cosmos_yr2_N540": [os.path.join(photdir, "Merian_COSMOS_LAE_N540.fits")]
         }
 
+    # protosteel: fewcols files in fiberassign inputcats (photdir unused)
+    if img == "protosteel":
+
+        fadir = os.path.join(
+            os.getenv("DESI_ROOT"), "survey", "fiberassign", "special", "tertiary"
+        )
+        mydict = {
+            "cosmos_pr51_GRIZ": [
+                os.path.join(
+                    fadir, "0051", "inputcats",
+                    "hsc_icmodelmag_22-24_fewcols_RA130d5_DEC000.fits.gz",
+                )
+            ],
+            "cosmos_pr52_GRIZ": [
+                os.path.join(
+                    fadir, "0052", "inputcats",
+                    "hsc_icmodelmag_22-24_fewcols_RA140_DEC003.fits.gz",
+                )
+            ],
+            "cosmos_pr55_GRIZ": [
+                os.path.join(
+                    fadir, "0055", "inputcats",
+                    "hsc_icmodelmag_22-24_COSMOS_fewcols_withexisting.fits.gz",
+                )
+            ],
+        }
+
     if "{}_{}".format(case, band) in mydict:
 
         return mydict["{}_{}".format(case, band)]
@@ -1982,6 +2070,44 @@ def get_phot_init_table(img, n):
                 ("FLUX_{}".format(band), ">f4"),
                 ("FLUX_IVAR_{}".format(band), ">f4"),
             ]
+
+    if img in ["protosteel"]:
+
+        dtype += [
+            ("OBJECT_ID", ">i8"),
+            ("RA", ">f8"),
+            ("DEC", ">f8"),
+            ("I_CMODEL_MAG_CORR", ">f8"),
+            ("A_G", ">f8"),
+            ("A_R", ">f8"),
+            ("A_I", ">f8"),
+            ("A_Z", ">f8"),
+            ("A_Y", ">f8"),
+        ]
+
+        for band in ["G", "R", "I", "Z", "Y"]:
+
+            dtype += [
+                ("{}_CMODEL_FLUX".format(band), ">f8"),
+                ("{}_CMODEL_FLUXERR".format(band), ">f8"),
+            ]
+
+        for band in ["G", "R", "I", "Z", "Y"]:
+
+            dtype += [
+                ("{}_FIBER_FLUX".format(band), ">f8"),
+                ("{}_FIBER_FLUXERR".format(band), ">f8"),
+            ]
+
+        dtype += [
+            ("I_EXTENDEDNESS_VALUE", ">f8"),
+            ("I_CMODEL_FLAG", "|b1"),
+            ("I_MASK_BRIGHTSTAR_ANY", "|b1"),
+            ("M_I_BLENDEDNESS_ABS", ">f8"),
+            ("DNNZ_PHOTOZ_BEST", ">f8"),
+            ("DNNZ_PHOTOZ_RISK_BEST", ">f8"),
+            ("DNNZ_PHOTOZ_STD_BEST", ">f8"),
+        ]
 
     if img in ["merian"]:
 
@@ -2223,6 +2349,14 @@ def get_phot_table(img, case, specinfo_table, photdir, v2=False):
             case, specinfo_table, photdir
         )
 
+    if img == "protosteel":
+
+        from desihiz.hizmerge_protosteel import get_protosteel_phot_infos
+
+        d["OBJECT_ID"], d["FILENAME"] = get_protosteel_phot_infos(
+            case, specinfo_table, photdir,
+        )
+
     # propagating columns from specinfo_table
     keys = ["TARGETID", "STD", "SKY"] + bands + ["CASE"]
 
@@ -2242,7 +2376,7 @@ def get_phot_table(img, case, specinfo_table, photdir, v2=False):
     if img in ["clauds"]:
         d_unqids = d["ID"].copy()
 
-    if img in ["hscwide"]:
+    if img in ["hscwide", "protosteel"]:
         d_unqids = d["OBJECT_ID"].copy()
 
     if img in ["merian"]:
@@ -2272,7 +2406,7 @@ def get_phot_table(img, case, specinfo_table, photdir, v2=False):
             ignore_keys += ["BRICKNAME", "OBJID"]
         if img in ["clauds"]:
             ignore_keys += ["ID"]
-        if img in ["hscwide"]:
+        if img in ["hscwide", "protosteel"]:
             ignore_keys += ["OBJECT_ID"]
         if img in ["merian"]:
             ignore_keys += ["INDEX_LAE"]
@@ -2295,7 +2429,11 @@ def get_phot_table(img, case, specinfo_table, photdir, v2=False):
         )
 
         # read input photometry (with some column names manipulation)
-        p = read_targfn(os.path.join(photdir, os.path.basename(targfn)))
+        if img == "protosteel":
+            from desihiz.hizmerge_protosteel import read_protosteel_large_phot
+            p = read_protosteel_large_phot(targfn, dcut["OBJECT_ID"])
+        else:
+            p = read_targfn(os.path.join(photdir, os.path.basename(targfn)))
 
         if img in ["odin", "suprime", "ibis"]:
             p_unqids = np.array(
@@ -2303,7 +2441,7 @@ def get_phot_table(img, case, specinfo_table, photdir, v2=False):
             )
         if img in ["clauds"]:
             p_unqids = p["ID"].copy()
-        if img in ["hscwide"]:
+        if img in ["hscwide", "protosteel"]:
             p_unqids = p["OBJECT_ID"].copy()
         if img in ["merian"]:
             p_unqids = p["INDEX_LAE"].copy()
@@ -2332,7 +2470,7 @@ def get_phot_table(img, case, specinfo_table, photdir, v2=False):
             assert np.all(p["OBJID"] == dcut["OBJID"])
         if img in ["clauds"]:
             assert np.all(p["ID"] == dcut["ID"])
-        if img in ["hscwide"]:
+        if img in ["hscwide", "protosteel"]:
             assert np.all(p["OBJECT_ID"] == dcut["OBJECT_ID"])
         if img in ["merian"]:
             assert np.all(p["INDEX_LAE"] == dcut["INDEX_LAE"])
@@ -2425,7 +2563,7 @@ def get_phot_table(img, case, specinfo_table, photdir, v2=False):
 
                 dcut[key] = p[key]
 
-        if img in ["hscwide"]:
+        if img in ["hscwide", "protosteel"]:
 
             dcut["BB_IMG"] = get_bb_img(targfn)
 
@@ -2455,7 +2593,7 @@ def get_phot_table(img, case, specinfo_table, photdir, v2=False):
 
         sel = np.ones(len(d), dtype=bool)
 
-    if img in ["hscwide"]:
+    if img in ["hscwide", "protosteel"]:
 
         sel = np.ones(len(d), dtype=bool)
 
