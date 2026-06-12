@@ -36,13 +36,21 @@ _large_phot_cols = [
 ]
 
 
-def get_protosteel_large_fn():
-    """Full path to the large HSC photometric catalog covering all protosteel fields."""
-    return os.path.join(
-        os.getenv("DESI_ROOT"),
-        "users", "nweaverd", "nweaverd_desi", "Steel",
-        "finalized_target_catalogs", "hsc_icmodelmag_22-24_COSMOS.fits.gz",
-    )
+_large_phot_basedir = os.path.join(
+    os.getenv("DESI_ROOT", ""),
+    "users", "nweaverd", "nweaverd_desi", "Steel", "finalized_target_catalogs",
+)
+
+_large_phot_fn = {
+    "cosmos_pr51": "hsc_icmodelmag_22-24_RA130d5_DEC000.fits.gz",
+    "cosmos_pr52": "hsc_icmodelmag_22-24_RA140_DEC003.fits.gz",
+    "cosmos_pr55": "hsc_icmodelmag_22-24_COSMOS.fits.gz",
+}
+
+
+def get_protosteel_large_fn(case):
+    """Full path to the per-case HSC photometric catalog for protosteel."""
+    return os.path.join(_large_phot_basedir, _large_phot_fn[case])
 
 
 def read_protosteel_large_phot(fn, objids):
@@ -176,7 +184,7 @@ def get_protosteel_phot_infos(case, d, photdir=None):
         targfns: full paths to the large photometric catalog, row-matched to d (array of str)
     """
     objids = np.zeros(len(d), dtype=int)
-    large_fn = get_protosteel_large_fn()
+    large_fn = get_protosteel_large_fn(case)
     targfns = np.zeros(len(d), dtype="S200")
 
     for band in ["GRIZ"]:
