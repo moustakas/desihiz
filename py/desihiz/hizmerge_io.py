@@ -2454,7 +2454,22 @@ def get_phot_table(img, case, specinfo_table, photdir, v2=False):
         # note: as cosmos_yr1, N673 has some duplicates
         sel = np.in1d(p_unqids, dcut_unqids)
         p, p_unqids = p[sel], p_unqids[sel]
-        assert np.all(np.in1d(dcut_unqids, p_unqids))
+        if img == "protosteel":
+            missing = np.setdiff1d(dcut_unqids, p_unqids)
+            if len(missing) > 0:
+                log.error(
+                    "{}/{} OBJECT_IDs missing from large catalog".format(
+                        len(missing), len(dcut_unqids)
+                    )
+                )
+                log.error(
+                    "first {} missing OBJECT_IDs: {}".format(
+                        min(50, len(missing)), missing[:50].tolist()
+                    )
+                )
+            assert len(missing) == 0
+        else:
+            assert np.all(np.in1d(dcut_unqids, p_unqids))
 
         # now p is rather small so we can just loop
         #   to row-match it to dcut
