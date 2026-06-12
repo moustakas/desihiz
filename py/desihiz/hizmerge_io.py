@@ -199,6 +199,8 @@ def get_bb_img(fn):
 
     elif os.path.basename(fn) in [
         "hsc_icmodelmag_22-24_COSMOS.fits.gz",
+        "hsc_icmodelmag_22-24_RA130d5_DEC000.fits.gz",
+        "hsc_icmodelmag_22-24_RA140_DEC003.fits.gz",
     ]:
 
         bb_img = "HSC"
