@@ -247,9 +247,17 @@ def get_specprod(case):
 
         specprod = "daily"
 
-    elif case in ["cosmos_pr51", "cosmos_pr52", "cosmos_pr55"]:
+    elif case == "cosmos_pr51":
 
         specprod = "tertiary51"
+
+    elif case == "cosmos_pr52":
+
+        specprod = "tertiary52"
+
+    elif case == "cosmos_pr55":
+
+        specprod = "tertiary55"
 
     else:
 
@@ -345,7 +353,7 @@ def get_specdirs(img, case):
         # non-standard path: standard DESI spectro/redux, not raichoor custom tree
         specdirs = [
             os.path.join(
-                os.getenv("DESI_ROOT"), "spectro", "redux", "tertiary51",
+                os.getenv("DESI_ROOT"), "spectro", "redux", specprod,
                 "healpix", "special", "other",
             )
         ]
@@ -1741,6 +1749,13 @@ def get_expids(img, case):
     assert case in get_img_cases(img)
 
     specprod = get_specprod(case)
+
+    if img == "protosteel":
+        fn = os.path.join(
+            os.getenv("DESI_ROOT"), "spectro", "redux", specprod,
+            "exposures-{}.fits".format(specprod),
+        )
+        return Table.read(fn)
 
     fn = os.path.join(
         os.getenv("DESI_ROOT"),
