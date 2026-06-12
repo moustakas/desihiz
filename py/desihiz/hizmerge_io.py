@@ -46,7 +46,7 @@ for img in allowed_img_cases:
 allowed_cases = np.unique(allowed_cases).tolist()
 
 
-def print_config_infos():
+def print_config_infos(img=None):
     """
     Print various configuration informations
     """
@@ -61,8 +61,11 @@ def print_config_infos():
         log.info("running with {} code version: {}".format(name, mod.__version__))
         log.info("running with {} code path: {}".format(name, mod.__path__))
 
-    #
-    log.info("spec_rootdir: {}".format(get_spec_rootdir()))
+    if img == "protosteel":
+        spec_rootdir = os.path.join(os.getenv("DESI_ROOT"), "spectro", "redux")
+    else:
+        spec_rootdir = get_spec_rootdir()
+    log.info("spec_rootdir: {}".format(spec_rootdir))
 
 
 def get_img_dir(img):
@@ -2274,7 +2277,7 @@ def get_phot_table(img, case, specinfo_table, photdir, v2=False):
     assert img in allowed_imgs
     bands = get_img_bands(img)
 
-    if photdir is None:
+    if photdir is None and img != "protosteel":
 
         photdir = os.path.join(get_img_dir(img), "phot")
 
