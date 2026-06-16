@@ -496,13 +496,13 @@ def get_cosmos2020_fn(case):
     return fn
 
 
-def get_clauds_fn(case, v2=False, uband="u"):
+def get_clauds_fn(case, v2=True, uband="u"):
     """
     Get the Desprez+23 CLAUDS SExtractor catalog full path
 
     Args:
         case: round of DESI observation (str)
-        v2 (optional, defaults to False): if True, use custom catalogs
+        v2 (optional, defaults to True): if True, use custom catalogs
             with per-HSC pointing photometric offset on the Desprez+23 catalogs,
             (see https://desi.lbl.gov/DocDB/cgi-bin/private/ShowDocument?docid=7493)
             (bool)
@@ -514,13 +514,9 @@ def get_clauds_fn(case, v2=False, uband="u"):
     """
     assert case in allowed_cases
 
-    fn = None
     claudsdir = os.path.join(get_img_dir("clauds"), "phot")
 
-    if case[:6] != "cosmos":
-        return None
-
-    field = case[:6]
+    field = case.split("_")[0]
 
     if v2:
 
