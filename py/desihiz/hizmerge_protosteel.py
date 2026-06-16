@@ -32,6 +32,15 @@ _large_phot_cols = [
     "I_MASK_BRIGHTSTAR_ANY",
     "M_I_BLENDEDNESS_ABS",
     "DNNZ_PHOTOZ_BEST", "DNNZ_PHOTOZ_RISK_BEST", "DNNZ_PHOTOZ_STD_BEST",
+    # per-object calibration offsets (magnitudes); used in read_protosteel_large_phot
+    "G_MAG_OFFSET", "R_MAG_OFFSET", "I_MAG_OFFSET", "Z_MAG_OFFSET", "Y_MAG_OFFSET",
+    "CORR_RMAG", "CORR_IMAG",
+]
+
+# calibration columns consumed during flux conversion; removed from output table
+_calib_cols = [
+    "G_MAG_OFFSET", "R_MAG_OFFSET", "I_MAG_OFFSET", "Z_MAG_OFFSET", "Y_MAG_OFFSET",
+    "CORR_RMAG", "CORR_IMAG",
 ]
 
 _NJY_PER_NANOMAGGY = 3631.0
@@ -76,28 +85,73 @@ def read_protosteel_large_phot(fn, objids):
     for key in p.colnames:
         p[key].name = p[key].name.upper()
 
-    # convert nJy → nanomaggies, rename to standard FLUX/FIBERFLUX columns
+    # convert nJy → nanomaggies with calibration corrections and bad-pixel masking
+    #
+    # Calibration (HSC PDR3 recommendation):
+    #   {BAND}_MAG_OFFSET : per-object FGCM photometric calibration (all bands)
+    #   CORR_RMAG / CORR_IMAG : filter homogenization r→r2 / i→i2 (R and I only)
+    # All offsets are subtracted from the magnitude, i.e.
+    #   mag_corr = mag - delta_mag  →  flux_corr = flux * 10^(delta_mag / 2.5)
+    #
+    # Bad-photometry conventions:
+    #   truly bad (NaN / inf flux or err)  → flux = 0, ivar = 0
+    #   upper limit (flux ≤ 0, finite err) → flux = 0, ivar = 1/err^2
+    #   good (flux > 0, finite err)        → flux_nmagy, ivar = 1/err_nmagy^2
     basename = os.path.basename(fn)
     for band in ["G", "R", "I", "Z", "Y"]:
+        delta_mag = np.asarray(p["{}_MAG_OFFSET".format(band)], dtype=float)
+        if band == "R":
+            delta_mag = delta_mag + np.asarray(p["CORR_RMAG"], dtype=float)
+        elif band == "I":
+            delta_mag = delta_mag + np.asarray(p["CORR_IMAG"], dtype=float)
+        calib_factor = 10.0 ** (delta_mag / 2.5)
+
         for prefix, raw_prefix in [("FLUX", "CMODEL"), ("FIBERFLUX", "FIBER")]:
             flux_raw = "{}_{}_{}" .format(band, raw_prefix, "FLUX")
             err_raw  = "{}_{}_{}".format(band, raw_prefix, "FLUXERR")
             flux_out = "{}_{}".format(prefix, band)
             ivar_out = "{}_IVAR_{}".format(prefix, band)
 
-            p[flux_out] = p[flux_raw] / _NJY_PER_NANOMAGGY
-            ivar = np.zeros(len(p), dtype=">f4")
-            good = p[err_raw] > 0
-            ivar[good] = (_NJY_PER_NANOMAGGY / p[err_raw][good]) ** 2
-            p[ivar_out] = ivar
+            flux_nJy = np.asarray(p[flux_raw], dtype=float)
+            err_nJy  = np.asarray(p[err_raw],  dtype=float)
+
+            # apply calibration then convert nJy → nanomaggies
+            flux_nmagy = flux_nJy * calib_factor / _NJY_PER_NANOMAGGY
+            err_nmagy  = err_nJy  * calib_factor / _NJY_PER_NANOMAGGY
+
+            good_err  = np.isfinite(err_nmagy) & (err_nmagy > 0)
+            good_flux = np.isfinite(flux_nmagy)
+
+            flux_arr = np.zeros(len(p), dtype=np.float32)
+            ivar_arr = np.zeros(len(p), dtype=np.float32)
+
+            _ivar_max = np.finfo(np.float32).max
+
+            # good detection
+            good = good_flux & good_err & (flux_nmagy > 0)
+            flux_arr[good] = flux_nmagy[good]
+            ivar_arr[good] = np.minimum(1.0 / err_nmagy[good] ** 2, _ivar_max)
+
+            # upper limit: non-positive but finite flux with valid error
+            uplim = good_flux & good_err & (flux_nmagy <= 0)
+            ivar_arr[uplim] = np.minimum(1.0 / err_nmagy[uplim] ** 2, _ivar_max)
+
+            p[flux_out] = flux_arr
+            p[ivar_out] = ivar_arr
 
             del p[flux_raw], p[err_raw]
 
             log.info(
-                "{}: convert {} and {} to {} (nanomaggies) and {}".format(
-                    basename, flux_raw, err_raw, flux_out, ivar_out
+                "{}: {},{} → {},{} ({} good, {} upper-limit, {} bad)".format(
+                    basename, flux_raw, err_raw, flux_out, ivar_out,
+                    int(good.sum()), int(uplim.sum()),
+                    int((~good & ~uplim).sum()),
                 )
             )
+
+    for col in _calib_cols:
+        if col in p.colnames:
+            del p[col]
 
     return p
 
