@@ -444,7 +444,7 @@ def get_clauds_cosmos_yr3_infos():
 # get photometry infos (clauds_id)
 # this is for clauds targets only
 # sky/std will have dummy values
-def get_clauds_phot_infos(case, d, photdir=None, v2=None):
+def get_clauds_phot_infos(case, d, photdir=None, v2=True):
     """
     Get the photometric information (TARGETID, ID) for a given case
 
@@ -453,7 +453,7 @@ def get_clauds_phot_infos(case, d, photdir=None, v2=None):
         d: output of the get_spec_table() function
         photdir (optional, defaults to $DESI_ROOT/users/raichoor/laelbg/{img}/phot):
             folder where the files are
-        v2 (optional, defaults to False): for img=clauds, if True, use custom catalogs
+        v2 (optional, defaults to True): for img=clauds, if True, use custom catalogs
             with per-HSC pointing photometric offset on the Desprez+23 catalogs,
             (see https://desi.lbl.gov/DocDB/cgi-bin/private/ShowDocument?docid=7493)
             (bool)

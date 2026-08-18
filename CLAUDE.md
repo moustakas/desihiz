@@ -27,6 +27,7 @@ The package lives in `py/desihiz/` and is installed as `desihizmerge`. All `bin/
 # Generate merged catalogs (run on a NERSC login/interactive node)
 desi_hiz_merge --outfn $YOUR_OUTPUT_DIR/desi-odin.fits --img odin --numproc 32
 desi_hiz_merge --outfn $YOUR_OUTPUT_DIR/desi-suprime.fits --img suprime --numproc 32
+desi_hiz_merge --outfn $YOUR_OUTPUT_DIR/desi-protosteel.fits --img protosteel --numproc 32
 
 # Add extras (Redrock fits, continuum params, Zelda Lya fits, CNN classifications)
 desi_hiz_extras --mergefn <merge.fits> --extra redrock
@@ -52,8 +53,8 @@ desi_simcoadd
 ### Module layout (`py/desihiz/`)
 
 **Core merge pipeline:**
-- `hizmerge_io.py` — central I/O hub. Defines `allowed_imgs` (`odin`, `suprime`, `clauds`, `hscwide`, `ibis`, `merian`) and `allowed_img_cases` per survey. Contains essentially all shared logic: path resolution (`get_img_dir`, `get_specdirs`, `get_coaddfns`), photometry table construction (`get_phot_table`), spectra reading (`get_spec_table`), VI ingestion, extinction corrections, and `merge_cases` / `build_hs` which assemble the final FITS output.
-- `hizmerge_odin.py`, `hizmerge_suprime.py`, `hizmerge_clauds.py`, `hizmerge_hscwide.py`, `hizmerge_ibis.py`, `hizmerge_merian.py` — survey-specific modules. Each provides `get_{survey}_{case}_infos()` functions that return target filenames, selection band metadata, and photometric catalog paths for each observation round (case).
+- `hizmerge_io.py` — central I/O hub. Defines `allowed_imgs` (`odin`, `suprime`, `clauds`, `hscwide`, `ibis`, `merian`, `protosteel`) and `allowed_img_cases` per survey. Contains essentially all shared logic: path resolution (`get_img_dir`, `get_specdirs`, `get_coaddfns`), photometry table construction (`get_phot_table`), spectra reading (`get_spec_table`), VI ingestion, extinction corrections, and `merge_cases` / `build_hs` which assemble the final FITS output.
+- `hizmerge_odin.py`, `hizmerge_suprime.py`, `hizmerge_clauds.py`, `hizmerge_hscwide.py`, `hizmerge_ibis.py`, `hizmerge_merian.py`, `hizmerge_protosteel.py` — survey-specific modules. Each provides `get_{survey}_{case}_infos()` functions that return target filenames, selection band metadata, and photometric catalog paths for each observation round (case).
 
 **Extras pipeline** (post-merge value-adds):
 - `extras_rr_cnn.py` — reads Redrock outputs (`read_zscan`) and CNN classifications
@@ -94,3 +95,18 @@ desi_simcoadd
 Each imaging survey has one or more cases reflecting DESI tertiary program observation rounds:
 - `cosmos_yr1`, `cosmos_yr2`, `cosmos_yr3` — COSMOS field, years 1–3
 - `xmmlss_yr2`, `xmmlss_yr4` — XMM-LSS field
+- `ra130d5`, `ra140`, `cosmos` — protosteel (tertiary programs 0051, 0052, 0055; named by field center)
+
+### protosteel notes
+
+`protosteel` is the pilot for the DESI Steel weak-lensing redshift calibration sample: faint HSC-Wide galaxies selected on i-band magnitude only (22 < i_HSC < 23.5, no color cuts), `TERTIARY_TARGET = "STEEL"`.
+
+Key differences from other surveys:
+- Spectra live in the standard DESI spectro/redux tree (`$DESI_ROOT/spectro/redux/tertiary{51,52,55}/healpix/special/other/`) rather than the raichoor custom tree. Each program has its own specprod.
+- Cases are named by HSC-Wide field center (`ra130d5`=RA~130.5°, `ra140`=RA~140°, `cosmos`=COSMOS field). Future fields (including one XMM-LSS and two more random HSC-Y3 pointings) will follow the same convention.
+- `get_specdirs()` and `get_coaddfns()` return early for protosteel to use this non-standard path.
+- `get_expids()` returns early for protosteel, reading `exposures-tertiary{NN}.fits` directly (FITS, not CSV).
+- Photometry comes from per-case HSC parent catalogs (not a single all-sky file); see `_large_phot_fn` in `hizmerge_protosteel.py`. Row-selection via fitsio avoids loading the full catalog.
+- COSMOS2020/CLAUDS photo-z are applied only to the `cosmos` case (the other two fields lie outside the COSMOS footprint). `get_clauds_fn()` returns `None` for non-cosmos cases.
+- Fluxes are converted from nJy → nanomaggies on read and stored as `FLUX_{G,R,I,Z,Y}` / `FLUX_IVAR_{band}` and `FIBERFLUX_{band}` / `FIBERFLUX_IVAR_{band}`, matching the hscwide/suprime convention.
+- No Galactic extinction columns (user computes these externally).

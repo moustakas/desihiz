@@ -401,8 +401,8 @@ def get_odin_phot_infos(case, d, photdir=None):
                         & (d["PHOT_DEC"] == d["PHOT_DEC"][i_miss])
                     )[0]
                     assert ii.size == 2
-                    assert ii[1] == i_miss
-                    i_fill = ii[0]
+                    assert i_miss in ii
+                    i_fill = ii[0] if ii[1] == i_miss else ii[1]
                     bricknames[i_miss] = bricknames[i_fill]
                     objids[i_miss] = objids[i_fill]
                     targfns[i_miss] = targfns[i_fill]

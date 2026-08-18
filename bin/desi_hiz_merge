@@ -88,17 +88,21 @@ def parse():
 
 def main():
 
-    print_config_infos()
+    print_config_infos(img=args.img)
 
     for kwargs in args._get_kwargs():
         log.info("{}\t{}".format(kwargs[0], kwargs[1]))
 
     bands = get_img_bands(args.img)
-    photdir = os.path.join(get_img_dir(args.img), "phot")
+    if args.img == "protosteel":
+        photdir = None
+    else:
+        photdir = os.path.join(get_img_dir(args.img), "phot")
 
     log.info("")
     log.info("bands\t= {}".format(bands))
-    log.info("photdir\t= {}".format(photdir))
+    if photdir is not None:
+        log.info("photdir\t= {}".format(photdir))
     log.info("")
 
     mydicts = {}
@@ -186,11 +190,13 @@ if __name__ == "__main__":
 
     outlog = args.outfn.replace(".fits", ".log")
 
-    if (os.path.isfile(args.outfn)) & (~args.overwrite):
+    if os.path.isfile(args.outfn) and not args.overwrite:
 
         msg = "{} exists and args.overwrite=False".format(args.outfn)
         log.error(msg)
         raise ValueError(msg)
+
+    os.makedirs(os.path.dirname(args.outfn), exist_ok=True)
 
     if args.log_stdout:
 
