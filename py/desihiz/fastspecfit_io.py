@@ -291,12 +291,27 @@ def run_fastspec(
             specprod_dir = _specprod_dir(orig_coaddfile)
             iteration.append((redrockfile, specprod_dir, I))
     else:
-        iteration = [(rr, td, None) for rr, td in _get_cumulative_redrockfiles(img)]
+        iteration = []
+        for redrockfile, specprod_dir in _get_cumulative_redrockfiles(img):
+            I = None
+            if vi_redshifts and os.path.isfile(redrockfile):
+                # Scope the VI subset to just the TARGETIDs in this tile's
+                # redrock file -- fspec carries no TILEID to do this via a
+                # catalog-only cut, unlike the healpix branch above.
+                rr_targetids = fitsio.read(redrockfile, "REDSHIFTS", columns=["TARGETID"])["TARGETID"]
+                I = np.isin(fspec["TARGETID"], rr_targetids)
+            iteration.append((redrockfile, specprod_dir, I))
 
     for redrockfile, specprod_dir, I in iteration:
         if not os.path.isfile(redrockfile):
             log.warning("Redrock file not found: {}".format(redrockfile))
             continue
+
+        if vi_redshifts:
+            vi_rows = fspec[I] if I is not None else fspec
+            if len(vi_rows) == 0:
+                log.info("No VI-redshift targets in {}; skipping.".format(redrockfile))
+                continue
 
         fastfile = _outfile(img, redrockfile, prefix, specprod_dir, coadd_type=coadd_type)
         os.makedirs(os.path.dirname(fastfile), exist_ok=True)
@@ -313,7 +328,6 @@ def run_fastspec(
         if ntargets:
             cmdargs += " --ntargets {}".format(ntargets)
         if vi_redshifts:
-            vi_rows = fspec[I] if I is not None else fspec
             targetids_str = ",".join(vi_rows["TARGETID"].astype(str))
             input_redshifts = ",".join(vi_rows["VI_Z"].astype(str))
             cmdargs += " --targetids {} --input-redshifts {}".format(targetids_str, input_redshifts)
