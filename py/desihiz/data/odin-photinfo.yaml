@@ -1,0 +1,33 @@
+# ODIN/HSC photometric parameter file
+
+uniqueid: 'TARGETID'
+
+photounits: 'nanomaggies'
+
+synth_bands: ['g', 'r', 'i', 'z']
+bands: ['g', 'r', 'r2', 'i', 'i2', 'z', 'N419', 'N501', 'N673']
+bands_to_fit: [True, True, True, True, True, True, True, True, True]
+
+synth_filters: {'': ['hsc2017-g', 'hsc2017-r', 'hsc2017-i', 'hsc2017-z']}
+filters: {'': ['hsc2017-g', 'hsc2017-r', 'hsc2017-r2', 'hsc2017-i', 'hsc2017-i2', 'hsc2017-z',
+               'odin-N419', 'odin-N501', 'odin-N673']}
+
+min_uncertainty: [0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02]
+
+readcols: ['TARGETID', 'RA', 'DEC']
+
+fluxcols: ['FLUX_G', 'FLUX_R', 'FLUX_R2', 'FLUX_I', 'FLUX_I2', 'FLUX_Z',
+           'FLUX_N419', 'FLUX_N501', 'FLUX_N673']
+
+fluxivarcols: ['FLUX_IVAR_G', 'FLUX_IVAR_R', 'FLUX_IVAR_R2', 'FLUX_IVAR_I', 'FLUX_IVAR_I2', 'FLUX_IVAR_Z',
+               'FLUX_IVAR_N419', 'FLUX_IVAR_N501', 'FLUX_IVAR_N673']
+
+absmag_bands: ['decam_u', 'decam_g', 'decam_r', 'decam_i', 'decam_z']
+
+band_shift: [0.0, 0.0, 0.0, 0.0, 0.0]
+
+absmag_filters: ['decam2014-u', 'decam2014-g', 'decam2014-r', 'decam2014-i', 'decam2014-z']
+
+viewer_layer: hsc-dr3
+
+viewer_pixscale: 0.17

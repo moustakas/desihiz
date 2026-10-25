@@ -46,6 +46,15 @@ desi_custom_coadds --prognum <N> --lastnight <YYYYMMDD>
 desi_simcoadd
 
 # Run Redrock on GPU nodes (see doc/redrock_cmds.ascii for exact srun invocation)
+
+# Run FastSpecFit on a merged catalog (reads/writes under $DESIHIZ_DIR/{img})
+desi_hiz_fastspecfit --img protosteel --fastspec --mp 128
+desi_hiz_fastspecfit --img protosteel --merge --coadd-type cumulative --mp 24
+desi_hiz_fastspecfit --img odin --fastspec --vi-redshifts --mp 128
+
+# Rerun Redrock with a custom template directory and gather the results
+desi_hiz_redrock --img odin --run-redrock --template-dir $MY_TEMPLATE_DIR
+desi_hiz_redrock --img odin --gather-redrock
 ```
 
 ## Code architecture
@@ -60,6 +69,11 @@ desi_simcoadd
 - `extras_rr_cnn.py` — reads Redrock outputs (`read_zscan`) and CNN classifications
 - `extras_phot_continuum.py` — spectrophotometric continuum fitting
 - `extras_zelda.py` — Lyman-alpha line profile fitting using the `Lya_zelda` package
+
+**FastSpecFit / Redrock post-processing** (operates on merged catalogs, img-parameterized):
+- `fastspecfit_io.py` — runs FastSpecFit (fastspec/fastphot) on any img's healpix or (protosteel-only, today) cumulative tile coadds; merges per-coadd outputs; builds QA figures and an HTML QA browser. Catalogs and all outputs live under `$DESIHIZ_DIR/{img}/...` for every img (not just protosteel) — the merge catalog's *input* location and the derived-product *output* location are the same tree. The photometric extension to use (`PHOTINFO` vs `PHOTV2INFO`) is detected at runtime from the catalog's actual HDUs, not hardcoded per img. Cumulative/tile-coadd discovery loops over `hizmerge_io.get_img_cases(img)` + `get_specprod()`/`get_expids()`, so it is not protosteel-specific code — it simply finds nothing for a healpix-only specprod like `loa` (odin/suprime/clauds).
+- `data/{odin,suprime,clauds,protosteel}-photinfo.yaml` — FastSpecFit photometric-parameter configs (bands, filters, flux columns) per img, checked into the repo and loaded via a package-relative path (works under `pip install -e .`).
+- `redrock_io.py` — reruns Redrock on an img's healpix coadds (optionally with a custom `RR_TEMPLATE_DIR`, e.g. for testing new high-z templates) and gathers the results into a catalog row-matched to the merged catalog. Infrastructure only: building custom templates and validating against the VI subset is separate downstream work this unblocks.
 
 **Angular clustering:**
 - `angclust_io.py` — builds per-band photometric target catalogs for angular clustering analysis (used externally by MJW)
@@ -89,6 +103,7 @@ desi_simcoadd
 - `$DESI_ROOT` — root of DESI data at NERSC (e.g., `/global/cfs/cdirs/desi`)
 - `$NERSC_HOST` — set automatically at NERSC; used for config logging
 - `$RR_TEMPLATE_DIR` — Redrock template directory (see `doc/redrock_cmds.ascii`)
+- `$DESIHIZ_DIR` — root of the desihiz merged catalogs and FastSpecFit/Redrock derived products, for every img (defaults to `$DESI_ROOT/users/ioannis/desihiz` if unset). Note the underlying spectra FastSpecFit/Redrock actually read are NERSC-only regardless: odin/suprime/clauds coadds live under `$DESI_ROOT/users/raichoor/laelbg/loa` (~638GB), protosteel's under `$DESI_ROOT/spectro/redux/tertiary{51,52,55}` — so `desi_hiz_fastspecfit`/`desi_hiz_redrock` runs need to happen at NERSC even once `$DESIHIZ_DIR` itself is mirrored elsewhere.
 
 ### Observation rounds ("cases")
 

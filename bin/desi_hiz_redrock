@@ -1,0 +1,64 @@
+#!/usr/bin/env python
+
+"""Rerun Redrock on desihiz healpix coadds, optionally with a custom template
+directory, and gather the results.
+
+This is infrastructure for testing new (e.g. high-z) Redrock templates
+against the desihiz VI subset -- it does not build the templates themselves.
+
+Required environment variables:
+  DESI_ROOT     Root of the DESI data filesystem.
+  DESIHIZ_DIR   Root of the desihiz merged catalogs and derived products
+                (defaults to $DESI_ROOT/users/ioannis/desihiz).
+
+Example usage (on Perlmutter):
+  salloc -N 1 -C gpu -A desi -t 04:00:00 --qos interactive
+
+  time desi_hiz_redrock --img odin --run-redrock --template-dir $MY_TEMPLATE_DIR
+  time desi_hiz_redrock --img odin --gather-redrock
+
+"""
+from argparse import ArgumentParser
+
+from desiutil.log import get_logger
+
+from desihiz.hizmerge_io import allowed_imgs
+from desihiz.redrock_io import run_redrock, gather_redrock
+
+log = get_logger()
+
+
+def main():
+    parser = ArgumentParser(
+        description="Rerun Redrock on desihiz healpix coadds.",
+    )
+    parser.add_argument("--img", choices=allowed_imgs, required=True,
+                        help="imaging survey to process")
+    parser.add_argument("--version", type=str, default=None,
+                        help="catalog version (default=latest under $DESIHIZ_DIR/{img})")
+    parser.add_argument("--targetids", type=str, default=None,
+                        help="comma-separated list of TARGETIDs to process")
+
+    parser.add_argument("--run-redrock", action="store_true", help="run Redrock")
+    parser.add_argument("--gather-redrock", action="store_true", help="gather the Redrock results")
+
+    parser.add_argument("--template-dir", type=str, default=None,
+                        help="custom RR_TEMPLATE_DIR to use instead of the default")
+    parser.add_argument("--rrdetails", action="store_true",
+                        help="also write the per-target rrdetails HDF5 file")
+    parser.add_argument("--overwrite", action="store_true", help="overwrite existing files")
+    args = parser.parse_args()
+
+    if args.run_redrock:
+        run_redrock(
+            args.img, version=args.version, targetids=args.targetids,
+            template_dir=args.template_dir, rrdetails=args.rrdetails,
+            overwrite=args.overwrite,
+        )
+
+    if args.gather_redrock:
+        gather_redrock(args.img, version=args.version, overwrite=args.overwrite)
+
+
+if __name__ == "__main__":
+    main()

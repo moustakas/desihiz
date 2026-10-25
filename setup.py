@@ -61,7 +61,7 @@ setup_keywords['test_suite']='{name}.test.{name}_test_suite.{name}_test_suite'.f
 #
 # Add internal data directories
 #
-setup_keywords['package_data'] = {}
+setup_keywords['package_data'] = {'desihiz': ['data/*.yaml']}
 #
 # Run setup command.
 #

@@ -1,0 +1,114 @@
+#!/usr/bin/env python
+
+"""Fit desihiz galaxy spectra and photometry with FastSpecFit.
+
+Wraps FastSpecFit to process healpix coadds (all imgs) or cumulative tile
+coadds (currently only protosteel has a standard tiles tree). Merged
+catalogs and all outputs live under $DESIHIZ_DIR/{img}/...
+
+Required environment variables:
+  DESI_ROOT     Root of the DESI data filesystem.
+  DESIHIZ_DIR   Root of the desihiz merged catalogs and derived products
+                (defaults to $DESI_ROOT/users/ioannis/desihiz).
+
+Example usage (on Perlmutter):
+  salloc -N 1 -C cpu -A desi -t 04:00:00 --qos interactive
+
+  # Fit healpix coadds (default):
+  time desi_hiz_fastspecfit --img protosteel --fastspec --mp 128
+
+  # Fit cumulative tile coadds:
+  time desi_hiz_fastspecfit --img protosteel --fastspec --coadd-type cumulative --mp 128
+
+  # Merge per-coadd outputs into a single catalog:
+  time desi_hiz_fastspecfit --img protosteel --merge --coadd-type cumulative --mp 24
+
+  # Build QA figures:
+  time desi_hiz_fastspecfit --img protosteel --qa --coadd-type cumulative --mp 128
+
+  # Refit a subset of targets at their VI redshifts:
+  time desi_hiz_fastspecfit --img odin --fastspec --vi-redshifts --mp 128
+
+"""
+from argparse import ArgumentParser
+
+from desiutil.log import get_logger
+
+from desihiz.hizmerge_io import allowed_imgs
+from desihiz.fastspecfit_io import (
+    run_fastspec,
+    merge_fastspec,
+    fastspec_qa,
+    build_qa_html,
+)
+
+log = get_logger()
+
+
+def main():
+    parser = ArgumentParser(
+        description="Run FastSpecFit on a merged desihiz catalog.",
+    )
+    parser.add_argument("--img", choices=allowed_imgs, required=True,
+                        help="imaging survey to process")
+    parser.add_argument("--version", type=str, default=None,
+                        help="catalog version (default=latest under $DESIHIZ_DIR/{img})")
+    parser.add_argument("--mp", type=int, default=1,
+                        help="number of multiprocessing processes")
+    parser.add_argument("-n", "--ntargets", type=int,
+                        help="number of targets per coadd file (for testing)")
+    parser.add_argument("--targetids", type=str, default=None,
+                        help="comma-separated list of TARGETIDs to process")
+
+    parser.add_argument("--fastspec", action="store_true",
+                        help="run fastspec (continuum + emission-line fitting)")
+    parser.add_argument("--fastphot", action="store_true",
+                        help="run fastphot (broadband photometry fitting only)")
+    parser.add_argument("--merge", action="store_true",
+                        help="merge per-coadd outputs into a single catalog")
+    parser.add_argument("--qa", action="store_true",
+                        help="build FastSpecFit QA figures")
+    parser.add_argument("--html", action="store_true",
+                        help="build HTML navigation page for QA figures")
+
+    parser.add_argument("--coadd-type", choices=["healpix", "cumulative"], default="healpix",
+                        help="coadd type to process")
+    parser.add_argument("--vi-redshifts", action="store_true",
+                        help="refit using visual-inspection redshifts")
+    parser.add_argument("--nolog", action="store_true",
+                        help="write output to stdout instead of per-coadd log files")
+    parser.add_argument("--overwrite", action="store_true",
+                        help="overwrite existing output files")
+    args = parser.parse_args()
+
+    if args.fastspec or args.fastphot:
+        run_fastspec(
+            args.img, version=args.version, targetids=args.targetids, fastphot=args.fastphot,
+            vi_redshifts=args.vi_redshifts, coadd_type=args.coadd_type,
+            overwrite=args.overwrite, nolog=args.nolog,
+            ntargets=args.ntargets, mp=args.mp,
+        )
+
+    if args.merge:
+        merge_fastspec(
+            args.img, version=args.version, fastphot=args.fastphot, mp=args.mp,
+            vi_redshifts=args.vi_redshifts, coadd_type=args.coadd_type,
+            overwrite=args.overwrite,
+        )
+
+    if args.qa:
+        fastspec_qa(
+            args.img, version=args.version, fastphot=args.fastphot, vi_redshifts=args.vi_redshifts,
+            coadd_type=args.coadd_type, mp=args.mp,
+            ntargets=args.ntargets, overwrite=args.overwrite,
+        )
+
+    if args.html:
+        build_qa_html(
+            args.img, fastphot=args.fastphot, vi_redshifts=args.vi_redshifts,
+            coadd_type=args.coadd_type,
+        )
+
+
+if __name__ == "__main__":
+    main()
